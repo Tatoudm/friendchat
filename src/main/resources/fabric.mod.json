@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "friendchat",
+  "version": "${version}",
+  "name": "FriendChat",
+  "description": "Add friends and MP tabs to the Minecraft chat, with custom commands to filter and target messages.",
+  "authors": [
+    "natha"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.friendchat.FriendChatClient"
+    ]
+  },
+  "mixins": [
+    "friendchat.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
