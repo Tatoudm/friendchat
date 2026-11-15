@@ -48,8 +48,8 @@ public abstract class ChatScreenMixin extends Screen {
     }
 
     private String[] friendchat$labels() {
-        String mp = TabManager.currentMpTarget.isEmpty() ? "MP" : "MP: " + TabManager.currentMpTarget;
-        return new String[]{"Général", "Amis", mp};
+        String mp = TabManager.currentMpTarget.isEmpty() ? "DM" : "DM: " + TabManager.currentMpTarget;
+        return new String[]{"General", "Friends", mp};
     }
 
     private static final TabManager.TabType[] TABS = {
@@ -86,8 +86,8 @@ public abstract class ChatScreenMixin extends Screen {
         for (int i = 0; i < bounds.length; i++) {
             if (mouseX >= bounds[i][0] && mouseX <= bounds[i][1]) {
                 if (TABS[i] == TabManager.TabType.MP && TabManager.currentMpTarget.isEmpty()) {
-                    HistoryManager.addLocal(Text.literal("§7Aucune conversation MP active. Utilise §f/"
-                            + ConfigManager.config.mpCmd + " <joueur>§7."));
+                    HistoryManager.addLocal(Text.literal("§7No active DM conversation. Use §f/"
+                            + ConfigManager.config.mpCmd + " <player>§7."));
                 } else {
                     TabManager.switchTab(TABS[i]);
                 }

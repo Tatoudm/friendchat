@@ -1,6 +1,6 @@
 # FriendChat
 
-Tabbed chat for Minecraft (Fabric, client-side only): **Général**, **Amis**, **MP**.
+Tabbed chat for Minecraft (Fabric, client-side only): **General**, **Friends**, **DM**.
 
 ## How it works
 
@@ -8,10 +8,10 @@ Every incoming message is kept in a bounded history (`historySize`). The chat sh
 the messages of the active tab; switching tab clears the display and replays the stored
 messages of the new tab, so hidden messages are never lost.
 
-- **Général** — everything.
-- **Amis** — only messages sent by players in your friends list (plus whispers with friends,
+- **General** — everything.
+- **Friends** — only messages sent by players in your friends list (plus private messages with friends,
   and system messages that mention a friend, e.g. "Bob joined the game").
-- **MP** — only your private conversation with the targeted player. Everything you type
+- **DM** — only your private conversation with the targeted player. Everything you type
   in this tab (not starting with `/`) is sent as `/<servermsg> <player> <message>`.
 
 Tabs are drawn between the chat history and the input box; click to switch.
@@ -19,17 +19,17 @@ Tabs are drawn between the chat history and the input box; click to switch.
 ## Commands (all client-side)
 
 - `/chatfriend add|remove <player>`, `/chatfriend list`
-- `/chatmp <player>` — open the MP tab on that player; `/chatmp close` closes it
+- `/chatmp <player>` — open the DM tab for that player; `/chatmp close` closes it
 - `/chatblock <player> [all|mp|friend|normal|messages]`, `/chatblock <player> unblock [scope]`, `/chatblock list`
 - `/chatclearhistory`
 - `/friendchatconfig` — show the config; `/friendchatconfig <key> <value>` to change it:
 
 | key | meaning |
 |---|---|
-| `servermsg` | private-message command used by the MP tab (`msg`, `tell`, `w`, `pm`...) |
-| `mpalwaysinfriendstab` | show every whisper in the Amis tab |
-| `mppublic` | MP tab also shows the target's public messages |
-| `systemmessages` | show system messages in all tabs (default: Général only) |
+| `servermsg` | private-message command used by the DM tab (`msg`, `tell`, `w`, `pm`...) |
+| `mpalwaysinfriendstab` | show every private message in the Friends tab |
+| `mppublic` | DM tab also shows the target's public messages |
+| `systemmessages` | show system messages in all tabs (default: General only) |
 | `historysize` | number of messages kept in memory |
 | `friend` `mp` `config` `block` `clearhistory` | rename commands (restart required) |
 

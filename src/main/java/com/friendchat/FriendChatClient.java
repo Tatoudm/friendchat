@@ -105,8 +105,8 @@ public class FriendChatClient implements ClientModInitializer {
 
     private static int showConfig(CommandContext<FabricClientCommandSource> context) {
         ConfigManager.ModConfig c = ConfigManager.config;
-        info("Configuration actuelle :");
-        info(" servermsg = " + c.serverMsgCmd + "  (commande utilisée dans l'onglet MP)");
+        info("Current configuration:");
+        info(" servermsg = " + c.serverMsgCmd + "  (command used in the DM tab)");
         info(" mpalwaysinfriendstab = " + c.mpAlwaysInFriendsTab);
         info(" mppublic = " + c.mpTabShowsPublicMessages);
         info(" systemmessages = " + c.systemMessagesInAllTabs);
@@ -133,10 +133,10 @@ public class FriendChatClient implements ClientModInitializer {
                         .executes(context -> {
                             String player = StringArgumentType.getString(context, "player");
                             if (ConfigManager.addFriend(player)) {
-                                info(player + " a été ajouté à la liste d'amis.");
+                                info(player + " was added to your friends list.");
                                 refreshChat();
                             } else {
-                                error(player + " est déjà dans la liste d'amis.");
+                                error(player + " is already on your friends list.");
                             }
                             return 1;
                         })))
@@ -146,19 +146,19 @@ public class FriendChatClient implements ClientModInitializer {
                         .executes(context -> {
                             String player = StringArgumentType.getString(context, "player");
                             if (ConfigManager.removeFriend(player)) {
-                                info(player + " a été retiré de la liste d'amis.");
+                                info(player + " was removed from your friends list.");
                                 refreshChat();
                             } else {
-                                error(player + " n'est pas dans la liste d'amis.");
+                                error(player + " is not on your friends list.");
                             }
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("list")
                     .executes(context -> {
                         if (ConfigManager.friends.isEmpty()) {
-                            info("Aucun ami.");
+                            info("You have no friends on your list.");
                         } else {
-                            info("Amis (" + ConfigManager.friends.size() + ") : " + String.join(", ", ConfigManager.friends));
+                            info("Friends (" + ConfigManager.friends.size() + "): " + String.join(", ", ConfigManager.friends));
                         }
                         return 1;
                     })));
@@ -166,7 +166,7 @@ public class FriendChatClient implements ClientModInitializer {
             dispatcher.register(ClientCommandManager.literal(ConfigManager.config.mpCmd)
                 .executes(context -> {
                     if (TabManager.currentMpTarget.isEmpty()) {
-                        error("Aucune conversation MP active. Utilise /" + ConfigManager.config.mpCmd + " <joueur>.");
+                        error("No active DM conversation. Use /" + ConfigManager.config.mpCmd + " <player>.");
                     } else {
                         TabManager.switchTab(TabManager.TabType.MP);
                     }
@@ -175,7 +175,7 @@ public class FriendChatClient implements ClientModInitializer {
                 .then(ClientCommandManager.literal("close")
                     .executes(context -> {
                         TabManager.closeMp();
-                        info("Conversation MP fermée.");
+                        info("DM conversation closed.");
                         return 1;
                     }))
                 .then(ClientCommandManager.argument("player", StringArgumentType.string())
@@ -183,7 +183,7 @@ public class FriendChatClient implements ClientModInitializer {
                     .executes(context -> {
                         String player = StringArgumentType.getString(context, "player");
                         TabManager.setMpTarget(player);
-                        info("Onglet MP centré sur " + player + ". Tes messages seront envoyés avec /"
+                        info("DM tab focused on " + player + ". Your messages will be sent using /"
                                 + ConfigManager.config.serverMsgCmd + " " + player + " ...");
                         return 1;
                     })));
@@ -192,7 +192,7 @@ public class FriendChatClient implements ClientModInitializer {
                 .executes(context -> {
                     HistoryManager.clear();
                     TabManager.refresh();
-                    info("Historique de chat vidé.");
+                    info("Chat history cleared.");
                     return 1;
                 }));
 
@@ -249,19 +249,19 @@ public class FriendChatClient implements ClientModInitializer {
                                         int size = Integer.parseInt(val.trim());
                                         ConfigManager.config.historySize = Math.max(1, size);
                                     } catch (NumberFormatException ex) {
-                                        error("Valeur invalide pour historysize: " + val);
+                                        error("Invalid value for historysize: " + val);
                                         return 0;
                                     }
                                     break;
                                 default:
-                                    error("Clé de configuration inconnue: " + type);
+                                    error("Unknown configuration key: " + type);
                                     return 0;
                             }
 
                             ConfigManager.saveConfig();
                             if (needsRefresh) refreshChat();
-                            info("Configuration mise à jour (" + type + " = " + val + ")."
-                                    + (requiresRestart ? " Redémarrage nécessaire pour ce changement." : ""));
+                            info("Configuration updated (" + type + " = " + val + ")."
+                                    + (requiresRestart ? " A restart is required for this change." : ""));
                             return 1;
                         }))));
 
@@ -269,7 +269,7 @@ public class FriendChatClient implements ClientModInitializer {
                 .then(ClientCommandManager.literal("list")
                     .executes(context -> {
                         if (ConfigManager.blocked.isEmpty()) {
-                            info("Aucun joueur bloqué.");
+                            info("No blocked players.");
                         } else {
                             for (Map.Entry<String, Set<BlockScope>> entry : ConfigManager.blocked.entrySet()) {
                                 info(entry.getKey() + " -> " + entry.getValue());
@@ -283,7 +283,7 @@ public class FriendChatClient implements ClientModInitializer {
                         String player = StringArgumentType.getString(context, "player");
                         ConfigManager.block(player);
                         refreshChat();
-                        info(player + " est maintenant totalement bloqué (mp, friend, normal).");
+                        info(player + " is now fully blocked (DM, Friends, General).");
                         return 1;
                     })
                     .then(ClientCommandManager.literal("unblock")
@@ -291,7 +291,7 @@ public class FriendChatClient implements ClientModInitializer {
                             String player = StringArgumentType.getString(context, "player");
                             ConfigManager.unblock(player);
                             refreshChat();
-                            info(player + " a été débloqué (tous niveaux).");
+                            info(player + " has been unblocked (all scopes).");
                             return 1;
                         })
                         .then(ClientCommandManager.argument("scope", StringArgumentType.word())
@@ -306,7 +306,7 @@ public class FriendChatClient implements ClientModInitializer {
                                 }
                                 ConfigManager.unblock(player, scopes);
                                 refreshChat();
-                                info(player + " débloqué pour: " + scopeKw);
+                                info(player + " unblocked for: " + scopeKw);
                                 return 1;
                             })))
                     .then(ClientCommandManager.argument("scope", StringArgumentType.word())
@@ -321,7 +321,7 @@ public class FriendChatClient implements ClientModInitializer {
                             }
                             ConfigManager.block(player, scopes);
                             refreshChat();
-                            info(player + " bloqué pour: " + scopeKw);
+                            info(player + " blocked for: " + scopeKw);
                             return 1;
                         }))));
         });
