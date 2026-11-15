@@ -1,68 +1,50 @@
 # FriendChat
 
-**FriendChat** adds a lightweight tabbed chat interface to Minecraft, letting you filter conversations and quickly message specific players — no server-side installation required.
+Tabbed chat for Minecraft (Fabric, client-side only): **Général**, **Amis**, **MP**.
 
-## ✨ Features
+## How it works
 
-- **Three chat tabs**: Normal, Friends, and MP (private message focus)
-- **Friends list**: filter chat to only show messages containing names from your custom friend list
-- **MP tab**: focus on a single player and instantly reply to them without retyping commands
-- **Configurable commands**: rename any of the mod's commands to fit your server or playstyle
-- **Persistent config**: your friend list and settings are saved between sessions
-- **Client-side only**: works on any Fabric server, nothing to install server-side
+Every incoming message is kept in a bounded history (`historySize`). The chat shows only
+the messages of the active tab; switching tab clears the display and replays the stored
+messages of the new tab, so hidden messages are never lost.
 
-## 🖱️ How it works
+- **Général** — everything.
+- **Amis** — only messages sent by players in your friends list (plus whispers with friends,
+  and system messages that mention a friend, e.g. "Bob joined the game").
+- **MP** — only your private conversation with the targeted player. Everything you type
+  in this tab (not starting with `/`) is sent as `/<servermsg> <player> <message>`.
 
-Three tabs appear at the bottom-left of your chat screen. Click a tab to switch between:
+Tabs are drawn between the chat history and the input box; click to switch.
 
-- **Normal** — the regular, unfiltered chat
-- **Friends** — only messages containing a name from your friends list are shown
-- **MP** — only messages involving your currently focused player are shown
+## Commands (all client-side)
 
-## 📜 Commands
+- `/chatfriend add|remove <player>`, `/chatfriend list`
+- `/chatmp <player>` — open the MP tab on that player; `/chatmp close` closes it
+- `/chatblock <player> [all|mp|friend|normal|messages]`, `/chatblock <player> unblock [scope]`, `/chatblock list`
+- `/chatclearhistory`
+- `/friendchatconfig` — show the config; `/friendchatconfig <key> <value>` to change it:
 
-All commands are client-side.
+| key | meaning |
+|---|---|
+| `servermsg` | private-message command used by the MP tab (`msg`, `tell`, `w`, `pm`...) |
+| `mpalwaysinfriendstab` | show every whisper in the Amis tab |
+| `mppublic` | MP tab also shows the target's public messages |
+| `systemmessages` | show system messages in all tabs (default: Général only) |
+| `historysize` | number of messages kept in memory |
+| `friend` `mp` `config` `block` `clearhistory` | rename commands (restart required) |
 
-### `/chatfriend`
-Manage your friends list.
-- `/chatfriend add <player>` — add a player to your friends list
-- `/chatfriend remove <player>` — remove a player from your friends list
+## Config files (`config/`)
 
-### `/chatmp <player>`
-Focuses the MP tab on the given player and switches to it. While the MP tab is active, any message you type in chat that doesn't start with `/` is automatically sent as a private message to that player using your server's message command (see below).
+`friendchat_config.json`, `friendchat_friends.json`, `friendchat_blocked.json`.
 
-### `/friendchatconfig <type> <newValue>`
-Rename the mod's commands.
-- `/friendchatconfig friend <newValue>` — change the name of `/chatfriend`
-- `/friendchatconfig mp <newValue>` — change the name of `/chatmp`
+If your server formats chat differently, edit the regex lists in `friendchat_config.json`
+(each needs a named group `player`):
+- `chatPatterns` — public messages (default: any message starting with `<x>`, even from the server, plus, `[Rank] Name: msg`, `Name » msg`)
+- `mpPatterns` — whispers (default handles vanilla and Essentials formats)
+- `alwaysShowPatterns` — messages forced into every tab
 
-⚠️ A game restart is required for renamed commands to take effect.
+## Requirements
 
-## ⚙️ Configuration
-
-FriendChat automatically creates two files in your `config` folder:
-- `friendchat_config.json` — command names and server message command
-- `friendchat_friends.json` — your saved friends list
-
-Default values:
-```json
-{
-  "friendCmd": "chatfriend",
-  "mpCmd": "chatmp",
-  "configCmd": "friendchatconfig",
-  "serverMsgCmd": "msg"
-}
-```
-
-If your server uses a different private message command than `/msg` (e.g. `/tell`, `/w`, `/pm`), update `serverMsgCmd` in the config file to match — this is what FriendChat uses under the hood when you type in the MP tab.
-
-## 📋 Requirements
-
-- Only Minecraft 1.21.11 for now
-- Fabric Loader 0.18.1+
-- Fabric API
-- Java 21+
-
-## 📄 License
+Minecraft 1.21.11, Fabric Loader 0.18.1+, Fabric API, Java 21+.
 
 MIT

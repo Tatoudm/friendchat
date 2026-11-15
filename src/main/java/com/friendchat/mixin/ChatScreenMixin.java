@@ -1,10 +1,13 @@
 package com.friendchat.mixin;
 
 import com.friendchat.config.ConfigManager;
+import com.friendchat.ui.HistoryManager;
 import com.friendchat.ui.TabManager;
 import net.minecraft.client.gui.Click;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,61 +17,105 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChatScreen.class)
 public abstract class ChatScreenMixin extends Screen {
+
+    private static final int TAB_HEIGHT = 11;
+    private static final int TAB_GAP = 2;
+    private static final int TAB_PADDING = 5;
+    private static final int TAB_START_X = 2;
+
     protected ChatScreenMixin(Text title) {
         super(title);
     }
 
     @Inject(method = "sendMessage", at = @At("HEAD"), cancellable = true)
-    private void onSendMessage(String chatText, boolean addToHistory, CallbackInfo ci) {
-        if (!chatText.startsWith("/") && TabManager.activeTab == TabManager.TabType.MP && !TabManager.currentMpTarget.isEmpty()) {
-            String newCommand = ConfigManager.config.serverMsgCmd + " " + TabManager.currentMpTarget + " " + chatText;
-            this.client.getNetworkHandler().sendChatCommand(newCommand);  
-            this.client.inGameHud.getChatHud().addToMessageHistory(chatText);
-            ci.cancel();
+    private void friendchat$onSendMessage(String chatText, boolean addToHistory, CallbackInfo ci) {
+        if (TabManager.activeTab != TabManager.TabType.MP || TabManager.currentMpTarget.isEmpty()) return;
+
+        String text = chatText.trim();
+        if (text.isEmpty() || text.startsWith("/")) return;
+
+        ClientPlayNetworkHandler handler = this.client.getNetworkHandler();
+        if (handler == null) return;
+
+        String cmd = ConfigManager.config.serverMsgCmd.trim();
+        if (cmd.startsWith("/")) cmd = cmd.substring(1);
+
+        handler.sendChatCommand(cmd + " " + TabManager.currentMpTarget + " " + text);
+        if (addToHistory) {
+            this.client.inGameHud.getChatHud().addToMessageHistory(text);
         }
+        ci.cancel();
+    }
+
+    private String[] friendchat$labels() {
+        String mp = TabManager.currentMpTarget.isEmpty() ? "MP" : "MP: " + TabManager.currentMpTarget;
+        return new String[]{"Général", "Amis", mp};
+    }
+
+    private static final TabManager.TabType[] TABS = {
+            TabManager.TabType.NORMAL, TabManager.TabType.FRIENDS, TabManager.TabType.MP
+    };
+
+    private int[][] friendchat$bounds() {
+        String[] labels = friendchat$labels();
+        int[][] bounds = new int[labels.length][2];
+        int x = TAB_START_X;
+        for (int i = 0; i < labels.length; i++) {
+            int w = this.textRenderer.getWidth(labels[i]) + TAB_PADDING * 2;
+            bounds[i][0] = x;
+            bounds[i][1] = x + w;
+            x += w + TAB_GAP;
+        }
+        return bounds;
+    }
+
+    private int friendchat$tabY() {
+        return this.height - 38;
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    public void onMouseClicked(Click click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
+    private void friendchat$onMouseClicked(Click click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
+        if (click.button() != 0) return;
+
         double mouseX = click.x();
         double mouseY = click.y();
+        int y = friendchat$tabY();
+        if (mouseY < y || mouseY > y + TAB_HEIGHT) return;
 
-        int startX = 2;
-        int startY = this.height - 40;
-        int tabWidth = 50;
-        int tabHeight = 15;
-
-        if (mouseY >= startY && mouseY <= startY + tabHeight) {
-            if (mouseX >= startX && mouseX <= startX + tabWidth) {
-                TabManager.activeTab = TabManager.TabType.NORMAL;
-                cir.setReturnValue(true);
-            } else if (mouseX >= startX + tabWidth + 2 && mouseX <= startX + (tabWidth * 2) + 2) {
-                TabManager.activeTab = TabManager.TabType.FRIENDS;
-                cir.setReturnValue(true);
-            } else if (mouseX >= startX + (tabWidth * 2) + 4 && mouseX <= startX + (tabWidth * 3) + 4) {
-                if (!TabManager.currentMpTarget.isEmpty()) {
-                    TabManager.activeTab = TabManager.TabType.MP;
-                    cir.setReturnValue(true);
+        int[][] bounds = friendchat$bounds();
+        for (int i = 0; i < bounds.length; i++) {
+            if (mouseX >= bounds[i][0] && mouseX <= bounds[i][1]) {
+                if (TABS[i] == TabManager.TabType.MP && TabManager.currentMpTarget.isEmpty()) {
+                    HistoryManager.addLocal(Text.literal("§7Aucune conversation MP active. Utilise §f/"
+                            + ConfigManager.config.mpCmd + " <joueur>§7."));
+                } else {
+                    TabManager.switchTab(TABS[i]);
                 }
+                cir.setReturnValue(true);
+                return;
             }
         }
     }
 
     @Inject(method = "render", at = @At("TAIL"))
-    public void onRender(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        int startX = 2;
-        int startY = this.height - 40;
-        int tabWidth = 50;
+    private void friendchat$onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        String[] labels = friendchat$labels();
+        int[][] bounds = friendchat$bounds();
+        int y = friendchat$tabY();
 
-        int normalColor = TabManager.activeTab == TabManager.TabType.NORMAL ? 0xFF00FF00 : 0xFFFFFFFF;
-        context.drawText(this.textRenderer, "Normal", startX, startY, normalColor, true);
+        for (int i = 0; i < labels.length; i++) {
+            boolean active = TabManager.activeTab == TABS[i];
+            boolean hovered = mouseX >= bounds[i][0] && mouseX <= bounds[i][1] && mouseY >= y && mouseY <= y + TAB_HEIGHT;
+            boolean disabled = TABS[i] == TabManager.TabType.MP && TabManager.currentMpTarget.isEmpty();
 
-        int friendColor = TabManager.activeTab == TabManager.TabType.FRIENDS ? 0xFF00FF00 : 0xFFFFFFFF;
-        context.drawText(this.textRenderer, "Friends", startX + tabWidth + 2, startY, friendColor, true);
+            int background = active ? 0xB0000000 : 0x70000000;
+            context.fill(bounds[i][0], y, bounds[i][1], y + TAB_HEIGHT, background);
+            if (active) {
+                context.fill(bounds[i][0], y + TAB_HEIGHT - 1, bounds[i][1], y + TAB_HEIGHT, 0xFF55FF55);
+            }
 
-        if (!TabManager.currentMpTarget.isEmpty()) {
-            int mpColor = TabManager.activeTab == TabManager.TabType.MP ? 0xFF00FF00 : 0xFFFFFFFF;
-            context.drawText(this.textRenderer, "MP: " + TabManager.currentMpTarget, startX + (tabWidth * 2) + 4, startY, mpColor, true);
+            int color = active ? 0xFF55FF55 : disabled ? 0xFF777777 : hovered ? 0xFFFFFFFF : 0xFFBBBBBB;
+            context.drawText(this.textRenderer, labels[i], bounds[i][0] + TAB_PADDING, y + 2, color, true);
         }
     }
 }
