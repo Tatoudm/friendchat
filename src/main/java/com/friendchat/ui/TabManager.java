@@ -1,7 +1,7 @@
 package com.friendchat.ui;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ChatHud;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
 
 public class TabManager {
     public enum TabType {
@@ -37,9 +37,9 @@ public class TabManager {
     }
 
     public static void refresh() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc == null || mc.inGameHud == null) return;
-        ChatHud hud = mc.inGameHud.getChatHud();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.gui == null) return;
+        ChatComponent hud = mc.gui.hud.getChat();
         HistoryManager.refresh(hud);
     }
 }

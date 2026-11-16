@@ -8,12 +8,11 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.minecraft.text.Text;
-
+import net.minecraft.network.chat.Component;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -22,15 +21,15 @@ import java.util.Set;
 public class FriendChatClient implements ClientModInitializer {
 
     private static void info(String message) {
-        HistoryManager.addLocal(Text.literal("§a[FriendChat]§r " + message));
+        HistoryManager.addLocal(Component.literal("§a[FriendChat]§r " + message));
     }
 
     private static void error(String message) {
-        HistoryManager.addLocal(Text.literal("§c[FriendChat] " + message));
+        HistoryManager.addLocal(Component.literal("§c[FriendChat] " + message));
     }
 
     private static final SuggestionProvider<FabricClientCommandSource> ALL_PLAYER_SUGGESTIONS = (context, builder) -> {
-        Set<String> names = new LinkedHashSet<>(context.getSource().getPlayerNames());
+        Set<String> names = new LinkedHashSet<>(context.getSource().getOnlinePlayerNames());
         names.addAll(ConfigManager.friends);
         names.addAll(ConfigManager.blocked.keySet());
         names.addAll(HistoryManager.getKnownPlayers());
@@ -126,9 +125,9 @@ public class FriendChatClient implements ClientModInitializer {
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
 
-            dispatcher.register(ClientCommandManager.literal(ConfigManager.config.friendCmd)
-                .then(ClientCommandManager.literal("add")
-                    .then(ClientCommandManager.argument("player", StringArgumentType.string())
+            dispatcher.register(ClientCommands.literal(ConfigManager.config.friendCmd)
+                .then(ClientCommands.literal("add")
+                    .then(ClientCommands.argument("player", StringArgumentType.string())
                         .suggests(ALL_PLAYER_SUGGESTIONS)
                         .executes(context -> {
                             String player = StringArgumentType.getString(context, "player");
@@ -140,8 +139,8 @@ public class FriendChatClient implements ClientModInitializer {
                             }
                             return 1;
                         })))
-                .then(ClientCommandManager.literal("remove")
-                    .then(ClientCommandManager.argument("player", StringArgumentType.string())
+                .then(ClientCommands.literal("remove")
+                    .then(ClientCommands.argument("player", StringArgumentType.string())
                         .suggests(FRIEND_SUGGESTIONS)
                         .executes(context -> {
                             String player = StringArgumentType.getString(context, "player");
@@ -153,7 +152,7 @@ public class FriendChatClient implements ClientModInitializer {
                             }
                             return 1;
                         })))
-                .then(ClientCommandManager.literal("list")
+                .then(ClientCommands.literal("list")
                     .executes(context -> {
                         if (ConfigManager.friends.isEmpty()) {
                             info("You have no friends on your list.");
@@ -163,7 +162,7 @@ public class FriendChatClient implements ClientModInitializer {
                         return 1;
                     })));
 
-            dispatcher.register(ClientCommandManager.literal(ConfigManager.config.mpCmd)
+            dispatcher.register(ClientCommands.literal(ConfigManager.config.mpCmd)
                 .executes(context -> {
                     if (TabManager.currentMpTarget.isEmpty()) {
                         error("No active DM conversation. Use /" + ConfigManager.config.mpCmd + " <player>.");
@@ -172,13 +171,13 @@ public class FriendChatClient implements ClientModInitializer {
                     }
                     return 1;
                 })
-                .then(ClientCommandManager.literal("close")
+                .then(ClientCommands.literal("close")
                     .executes(context -> {
                         TabManager.closeMp();
                         info("DM conversation closed.");
                         return 1;
                     }))
-                .then(ClientCommandManager.argument("player", StringArgumentType.string())
+                .then(ClientCommands.argument("player", StringArgumentType.string())
                     .suggests(ALL_PLAYER_SUGGESTIONS)
                     .executes(context -> {
                         String player = StringArgumentType.getString(context, "player");
@@ -188,7 +187,7 @@ public class FriendChatClient implements ClientModInitializer {
                         return 1;
                     })));
 
-            dispatcher.register(ClientCommandManager.literal(ConfigManager.config.clearHistoryCmd)
+            dispatcher.register(ClientCommands.literal(ConfigManager.config.clearHistoryCmd)
                 .executes(context -> {
                     HistoryManager.clear();
                     TabManager.refresh();
@@ -196,11 +195,11 @@ public class FriendChatClient implements ClientModInitializer {
                     return 1;
                 }));
 
-            dispatcher.register(ClientCommandManager.literal(ConfigManager.config.configCmd)
+            dispatcher.register(ClientCommands.literal(ConfigManager.config.configCmd)
                 .executes(FriendChatClient::showConfig)
-                .then(ClientCommandManager.argument("commandType", StringArgumentType.word())
+                .then(ClientCommands.argument("commandType", StringArgumentType.word())
                     .suggests(CONFIG_KEY_SUGGESTIONS)
-                    .then(ClientCommandManager.argument("newValue", StringArgumentType.word())
+                    .then(ClientCommands.argument("newValue", StringArgumentType.word())
                         .suggests(CONFIG_VALUE_SUGGESTIONS)
                         .executes(context -> {
                             String type = StringArgumentType.getString(context, "commandType").toLowerCase();
@@ -265,8 +264,8 @@ public class FriendChatClient implements ClientModInitializer {
                             return 1;
                         }))));
 
-            dispatcher.register(ClientCommandManager.literal(ConfigManager.config.blockCmd)
-                .then(ClientCommandManager.literal("list")
+            dispatcher.register(ClientCommands.literal(ConfigManager.config.blockCmd)
+                .then(ClientCommands.literal("list")
                     .executes(context -> {
                         if (ConfigManager.blocked.isEmpty()) {
                             info("No blocked players.");
@@ -277,7 +276,7 @@ public class FriendChatClient implements ClientModInitializer {
                         }
                         return 1;
                     }))
-                .then(ClientCommandManager.argument("player", StringArgumentType.string())
+                .then(ClientCommands.argument("player", StringArgumentType.string())
                     .suggests(ALL_PLAYER_SUGGESTIONS)
                     .executes(context -> {
                         String player = StringArgumentType.getString(context, "player");
@@ -286,7 +285,7 @@ public class FriendChatClient implements ClientModInitializer {
                         info(player + " is now fully blocked (DM, Friends, General).");
                         return 1;
                     })
-                    .then(ClientCommandManager.literal("unblock")
+                    .then(ClientCommands.literal("unblock")
                         .executes(context -> {
                             String player = StringArgumentType.getString(context, "player");
                             ConfigManager.unblock(player);
@@ -294,7 +293,7 @@ public class FriendChatClient implements ClientModInitializer {
                             info(player + " has been unblocked (all scopes).");
                             return 1;
                         })
-                        .then(ClientCommandManager.argument("scope", StringArgumentType.word())
+                        .then(ClientCommands.argument("scope", StringArgumentType.word())
                             .suggests(SCOPE_SUGGESTIONS)
                             .executes(context -> {
                                 String player = StringArgumentType.getString(context, "player");
@@ -309,7 +308,7 @@ public class FriendChatClient implements ClientModInitializer {
                                 info(player + " unblocked for: " + scopeKw);
                                 return 1;
                             })))
-                    .then(ClientCommandManager.argument("scope", StringArgumentType.word())
+                    .then(ClientCommands.argument("scope", StringArgumentType.word())
                         .suggests(SCOPE_SUGGESTIONS)
                         .executes(context -> {
                             String player = StringArgumentType.getString(context, "player");

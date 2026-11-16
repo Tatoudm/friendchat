@@ -2,12 +2,6 @@ package com.friendchat.ui;
 
 import com.friendchat.config.BlockScope;
 import com.friendchat.config.ConfigManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.text.Text;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -17,6 +11,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.multiplayer.chat.GuiMessageSource;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MessageSignature;
 
 public class HistoryManager {
 
@@ -41,16 +41,17 @@ public class HistoryManager {
     private static List<Pattern> alwaysShowPatterns = new ArrayList<>();
 
     private static class BufferedMessage {
-        final Text text;
-        final MessageSignatureData signature;
-        final MessageIndicator indicator;
+        final Component text;
+        final MessageSignature signature;
+        final GuiMessageTag indicator;
         final String rawText;
         final Kind kind;
         final boolean forced;
         final String player;
+        final GuiMessageSource source;
 
-        BufferedMessage(Text text, MessageSignatureData signature, MessageIndicator indicator,
-                        String rawText, Kind kind, boolean forced, String player) {
+        BufferedMessage(Component text, MessageSignature signature, GuiMessageTag indicator,
+                        String rawText, Kind kind, boolean forced, String player, GuiMessageSource source) {
             this.text = text;
             this.signature = signature;
             this.indicator = indicator;
@@ -58,10 +59,25 @@ public class HistoryManager {
             this.kind = kind;
             this.forced = forced;
             this.player = player;
+            this.source = source;
         }
     }
 
-    public static void onIncomingMessage(ChatHud hud, Text message, MessageSignatureData signature, MessageIndicator indicator) {
+    public static void onIncomingPlayerMessage(ChatComponent hud, Component message, MessageSignature signature,
+                                               GuiMessageTag indicator) {
+        onIncomingMessage(hud, message, signature, indicator, GuiMessageSource.PLAYER);
+    }
+
+    public static void onIncomingServerSystemMessage(ChatComponent hud, Component message) {
+        onIncomingMessage(hud, message, null, null, GuiMessageSource.SYSTEM_SERVER);
+    }
+
+    public static void onIncomingClientSystemMessage(ChatComponent hud, Component message) {
+        onIncomingMessage(hud, message, null, null, GuiMessageSource.SYSTEM_CLIENT);
+    }
+
+    private static void onIncomingMessage(ChatComponent hud, Component message, MessageSignature signature,
+                                          GuiMessageTag indicator, GuiMessageSource source) {
         String rawText = message.getString();
 
         String mpPartner = firstGroup(mpPatterns, rawText);
@@ -82,7 +98,7 @@ public class HistoryManager {
         if (player != null) rememberPlayer(player);
 
         boolean forced = matchesAny(alwaysShowPatterns, rawText);
-        BufferedMessage bm = new BufferedMessage(message, signature, indicator, rawText, kind, forced, player);
+        BufferedMessage bm = new BufferedMessage(message, signature, indicator, rawText, kind, forced, player, source);
 
         if (player != null && isFullyBlocked(player)) return;
 
@@ -92,15 +108,16 @@ public class HistoryManager {
         }
     }
 
-    public static void addLocal(Text text) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc == null || mc.inGameHud == null) return;
-        BufferedMessage bm = new BufferedMessage(text, null, null, text.getString(), Kind.LOCAL, true, null);
+    public static void addLocal(Component text) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.gui == null) return;
+        BufferedMessage bm = new BufferedMessage(text, null, null, text.getString(), Kind.LOCAL, true, null,
+                GuiMessageSource.SYSTEM_CLIENT);
         store(bm);
-        display(mc.inGameHud.getChatHud(), bm);
+        display(mc.gui.hud.getChat(), bm);
     }
 
-    public static void removeBySignature(MessageSignatureData signature) {
+    public static void removeBySignature(MessageSignature signature) {
         if (signature == null) return;
         buffer.removeIf(bm -> bm.signature != null && Objects.equals(bm.signature, signature));
     }
@@ -113,9 +130,9 @@ public class HistoryManager {
         }
     }
 
-    public static void refresh(ChatHud hud) {
-        hud.clear(false);
-        hud.resetScroll();
+    public static void refresh(ChatComponent hud) {
+        hud.clearMessages(false);
+        hud.resetChatScroll();
 
         List<BufferedMessage> toShow = new ArrayList<>();
         for (BufferedMessage bm : buffer) {
@@ -127,10 +144,20 @@ public class HistoryManager {
         }
     }
 
-    private static void display(ChatHud hud, BufferedMessage bm) {
+    private static void display(ChatComponent hud, BufferedMessage bm) {
         bypass = true;
         try {
-            hud.addMessage(bm.text, bm.signature, bm.indicator);
+            switch (bm.source) {
+                case PLAYER:
+                    hud.addPlayerMessage(bm.text, bm.signature, bm.indicator);
+                    break;
+                case SYSTEM_SERVER:
+                    hud.addServerSystemMessage(bm.text);
+                    break;
+                case SYSTEM_CLIENT:
+                    hud.addClientSystemMessage(bm.text);
+                    break;
+            }
         } finally {
             bypass = false;
         }

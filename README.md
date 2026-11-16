@@ -1,6 +1,6 @@
 # FriendChat
 
-Tabbed chat for Minecraft (Fabric, client-side only): **General**, **Friends**, **DM**.
+Tabbed chat for Minecraft 26.2 (Fabric, client-side only): **General**, **Friends**, **DM**.
 
 ## How it works
 
@@ -45,6 +45,6 @@ If your server formats chat differently, edit the regex lists in `friendchat_con
 
 ## Requirements
 
-Minecraft 1.21.11, Fabric Loader 0.18.1+, Fabric API, Java 21+.
+Minecraft 26.2, Fabric Loader 0.20.1+, Fabric API 0.161.0+26.2, Java 25+.
 
 MIT
